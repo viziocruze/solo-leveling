@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Level Up">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#070B14">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Level Up: Daily Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070B14; --panel:#0D1628; --panel2:#111D34; --edge:#2A5A8C; --glow:#5CC8FF;
+  --ink:#DCEBFF; --muted:#8397B8; --gold:#F2C14E; --red:#FF5C74; --ok:#5CE1A8;
+  --hud:"Chakra Petch","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#E9EFF8; --panel:#FFFFFF; --panel2:#F2F6FC; --edge:#9DBCE0; --glow:#0A77C2;
+    --ink:#0E1B2E; --muted:#56698A; --gold:#A77400; --red:#C9243F; --ok:#11875A;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#E9EFF8; --panel:#FFFFFF; --panel2:#F2F6FC; --edge:#9DBCE0; --glow:#0A77C2;
+  --ink:#0E1B2E; --muted:#56698A; --gold:#A77400; --red:#C9243F; --ok:#11875A;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-font-smoothing:antialiased;min-height:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.wrap{max-width:500px;margin:0 auto;padding:18px 16px 40px}
+.hidden{display:none!important}
+
+/* The window: the one bold element */
+.win{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--edge);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--glow) 18%,transparent),0 0 24px -6px color-mix(in srgb,var(--glow) 55%,transparent);
+  padding:16px;margin-bottom:16px;clip-path:polygon(0 10px,10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+.win-title{font-family:var(--hud);font-weight:700;font-size:15px;color:var(--glow);letter-spacing:.06em;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+.win-title small{font-family:var(--body);font-weight:500;letter-spacing:0;color:var(--muted);font-size:13px}
+
+/* Onboarding */
+.intro h1{font-family:var(--hud);font-size:44px;line-height:1;margin:20px 0 8px}
+.intro p{color:var(--muted);margin:0 0 18px}
+label.lbl{display:block;font-weight:600;margin:0 0 6px}
+.name{width:100%;font:inherit;padding:12px;background:var(--panel2);border:1px solid var(--edge);color:var(--ink);border-radius:0}
+.opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--edge);padding:12px 14px;margin-top:10px}
+.opt[aria-pressed="true"]{border-color:var(--glow);box-shadow:inset 0 0 0 1px var(--glow)}
+.opt b{font-family:var(--hud);font-size:18px;display:block}
+.opt span{color:var(--muted);font-size:14px}
+.cta{width:100%;margin-top:18px;padding:15px;border:1px solid var(--glow);background:color-mix(in srgb,var(--glow) 16%,transparent);color:var(--ink);font-family:var(--hud);font-weight:700;font-size:18px;letter-spacing:.04em}
+.cta:disabled{opacity:.4;cursor:default}
+
+/* Status */
+.status{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:end}
+.lv{font-family:var(--hud);font-weight:700;line-height:.85;font-size:76px}
+.lv sup{font-size:18px;color:var(--muted);vertical-align:top;margin-right:2px}
+.who{padding-bottom:6px}
+.who .n{font-weight:600;font-size:18px}
+.who .t{color:var(--muted);font-size:14px}
+.rank{font-family:var(--hud);font-weight:700;font-size:40px;line-height:1;padding:4px 12px;border:1px solid var(--edge);color:var(--glow);margin-bottom:6px}
+.xp{grid-column:1/-1;margin-top:10px}
+.bar{height:8px;background:color-mix(in srgb,var(--edge) 45%,transparent);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--glow);box-shadow:0 0 10px var(--glow);transition:width .4s}
+.xpline{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:5px}
+
+/* Quest */
+.q{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid color-mix(in srgb,var(--edge) 50%,transparent)}
+.q:first-of-type{border-top:0}
+.box{flex:none;width:28px;height:28px;border:1.5px solid var(--edge);background:none;display:grid;place-items:center;padding:0}
+.box svg{width:16px;height:16px;opacity:0}
+.q.done .box{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.q.done .box svg{opacity:1}
+.q .txt{flex:1;min-width:0}
+.q .nm{font-weight:600}
+.q.done .nm{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--ok)}
+.q .hint{font-size:13px;color:var(--muted)}
+.ctr{display:flex;align-items:center;gap:4px;flex:none}
+.ctr button{min-width:34px;height:34px;border:1px solid var(--edge);background:none;font-family:var(--hud);font-weight:700;font-size:15px;padding:0 6px}
+.ctr output{min-width:64px;text-align:center;font-family:var(--hud);font-weight:700;font-size:17px}
+button.txt{background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.howtag{font-family:var(--hud);font-weight:700;font-size:11px;color:var(--glow);border:1px solid var(--edge);padding:1px 6px;margin-left:4px;vertical-align:2px;text-decoration:none;display:inline-block}
+.q.done .nm .howtag{text-decoration:none}
+.steps{text-align:left;margin:12px 0;padding-left:22px}
+.steps li{margin:8px 0}
+.reward{margin-top:12px;padding-top:12px;border-top:1px dashed var(--edge);font-size:14px;color:var(--muted)}
+.reward.clear{color:var(--ok);font-weight:600}
+.warn{font-size:13px;color:var(--red);margin-top:10px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px}
+.stats div{font-size:13px;color:var(--muted)}
+.stats b{display:block;font-family:var(--hud);font-size:24px;color:var(--ink);line-height:1.1}
+.next{font-size:14px;color:var(--muted);margin:0}
+.next b{color:var(--ink)}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px}
+.link{background:none;border:0;padding:6px 0;color:var(--muted);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.savenote{color:var(--muted);font-size:13px;margin:8px 0 0}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:10;background:rgba(3,6,12,.72);display:flex;align-items:center;justify-content:center;padding:24px}
+.modal .win{width:100%;max-width:420px;margin:0;text-align:center;padding:26px 20px}
+.modal h2{font-family:var(--hud);font-size:46px;line-height:1;margin:6px 0 10px}
+.modal.lvup h2{color:var(--gold);text-shadow:0 0 18px color-mix(in srgb,var(--gold) 60%,transparent)}
+.modal.pen h2{color:var(--red)}
+.modal p{color:var(--muted);margin:0 0 8px}
+.modal ul{list-style:none;padding:0;margin:12px 0;text-align:left;display:inline-block}
+.modal li{margin:4px 0}
+.modal .cta{margin-top:12px}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.modal .win{animation:rise .35s ease-out}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<section id="intro" class="intro hidden">
+  <h1>Level 1</h1>
+  <p>Everyone starts somewhere. Your daily quest begins small enough for anyone, and it grows as you level up.</p>
+  <label class="lbl" for="nm">Your name</label>
+  <input id="nm" class="name" maxlength="24" autocomplete="nickname" placeholder="Player">
+  <div style="margin-top:18px"><span class="lbl">Where are you starting?</span>
+    <div id="starts"></div>
+  </div>
+  <button class="cta" id="accept" disabled>Accept the quest</button>
+  <p class="savenote" id="note0"></p>
+</section>
+
+<section id="app" class="hidden">
+  <div class="win">
+    <div class="status">
+      <div class="lv"><sup>LV</sup><span id="lv">1</span></div>
+      <div class="who"><div class="n" id="who"></div><div class="t" id="title"></div></div>
+      <div class="rank" id="rank" aria-label="Rank">E</div>
+      <div class="xp">
+        <div class="bar"><span id="xpbar"></span></div>
+        <div class="xpline"><span id="xptxt"></span><span id="streak"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="win">
+    <p class="win-title">Daily quest <small id="qdate"></small></p>
+    <div id="quests"></div>
+    <div id="reward" class="reward"></div>
+  </div>
+
+  <div class="win">
+    <p class="win-title">Stats</p>
+    <div class="stats">
+      <div><b id="tPush">0</b>push-ups</div>
+      <div><b id="tSit">0</b>sit-ups</div>
+      <div><b id="tSquat">0</b>squats</div>
+      <div><b id="tKm">0</b>km moved</div>
+      <div><b id="tClear">0</b>quests cleared</div>
+      <div><b id="tBest">0</b>best streak</div>
+    </div>
+  </div>
+
+  <div class="win">
+    <p class="win-title">Next level</p>
+    <p class="next" id="nextTxt"></p>
+  </div>
+
+  <div class="foot">
+    <button class="link" id="rulesBtn">How it works</button>
+    <button class="link" id="resetBtn">Start over</button>
+  </div>
+  <p class="savenote" id="note1"></p>
+</section>
+</div>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="win" id="modalBody"></div></div>
+
+<script>
+/* ---------- Game rules ---------- */
+const MAX = 50;
+const STARTS = [
+  {lv:1,  b:"From zero",      s:"Haven't exercised in a long time, or ever"},
+  {lv:8,  b:"A little active", s:"Can walk a mile and do a few push-ups"},
+  {lv:18, b:"Already active",  s:"Work out now and then"}
+];
+const RANKS = [[50,"S"],[40,"A"],[30,"B"],[20,"C"],[10,"D"],[1,"E"]];
+const TITLES = {E:"Beginner",D:"Getting stronger",C:"Consistent",B:"Seasoned",A:"Elite",S:"Final quest unlocked"};
+const rankOf = L => RANKS.find(r => L >= r[0])[1];
+const curve = L => Math.pow(Math.min(1,(L-1)/(MAX-1)), 1.3);
+function targets(L){
+  const t = curve(L);
+  return {
+    push: Math.round(5 + 95*t),
+    sit:  Math.round(5 + 95*t),
+    squat:Math.round(10 + 90*t),
+    km:   Math.round((0.5 + 9.5*t)*10)/10
+  };
+}
+function names(L){
+  return {
+    push: L<8 ? ["Wall push-ups","Hands on a wall, lean in and push back"] : L<18 ? ["Knee push-ups","Knees down, straight line from knees to head"] : ["Push-ups","Full push-ups. Drop to knees if you need to finish"],
+    sit:  L<10 ? ["Crunches","Lift shoulders off the floor, lower back stays down"] : ["Sit-ups","All the way up"],
+    squat:L<8 ? ["Chair squats","Sit down on a chair and stand back up"] : ["Squats","Hips back, thighs to parallel if you can"],
+    km:   L<10 ? ["Walk","Any pace. Split it up if you need to"] : L<25 ? ["Walk or jog","Jog the parts you can"] : ["Run","Walk breaks are fine"]
+  };
+}
+const HOW = {
+  "Wall push-ups":["Stand an arm's length from a wall, feet hip-width apart.","Put your palms flat on the wall at shoulder height, a bit wider than your shoulders.","Bend your elbows and lean in until your nose nearly touches the wall. Keep your body straight like a plank.","Push back to the start. That's one rep."],
+  "Knee push-ups":["Kneel on a mat, then walk your hands forward until your body is straight from knees to head.","Hands under your shoulders, slightly wider.","Lower your chest toward the floor, elbows angled back about 45°, not flared out.","Push up until your arms are straight."],
+  "Push-ups":["Get into a high plank: hands under shoulders, legs straight, toes on the floor.","Squeeze your stomach and glutes so your hips don't sag or stick up.","Lower your chest to about a fist's height from the floor.","Push back up. If your form breaks, finish the set on your knees."],
+  "Crunches":["Lie on your back, knees bent, feet flat on the floor.","Cross your arms over your chest, or rest your fingertips lightly behind your ears. Don't pull on your neck.","Tighten your stomach and lift your shoulder blades off the floor. Your lower back stays down.","Pause, then lower slowly."],
+  "Sit-ups":["Lie on your back, knees bent, feet flat. Tuck your feet under a couch if they lift.","Cross your arms over your chest.","Curl up one vertebra at a time until your chest is near your knees.","Lower back down with control, don't flop."],
+  "Chair squats":["Stand in front of a sturdy chair, feet shoulder-width apart.","Push your hips back and bend your knees, like sitting down.","Touch the seat lightly, or sit fully if you need to.","Press through your heels and stand up tall."],
+  "Squats":["Stand with feet shoulder-width apart, toes turned out slightly.","Push your hips back and bend your knees. Chest up, knees tracking over your toes.","Go down until your thighs are about parallel to the floor, or as low as is comfortable.","Drive through your heels to stand."],
+  "Walk":["Walk at a pace where you can still talk comfortably.","Keep your head up, shoulders relaxed, arms swinging naturally.","Split the distance into two or three walks if you need to.","Use your phone's step counter or a free app to track distance."],
+  "Walk or jog":["Warm up with 5 minutes of brisk walking.","Jog for 1 minute, then walk for 2 minutes. Repeat until you hit the distance.","Jog a little longer each week as it gets easier.","Land softly under your body with short steps, not big strides."],
+  "Run":["Warm up with 5 minutes of walking or slow jogging.","Run at an easy pace where you could still say short sentences.","Take walk breaks whenever you need them. The distance is what counts.","Cool down with a few minutes of walking and some light stretching."]
+};
+const TIPS = "Warm up for 3–5 minutes first. Slow, controlled reps beat fast ones. Stop if you feel sharp pain, dizziness or chest pain.";
+const need = L => 100 + 20*(L-1);
+const XP_TASK = 20, XP_CLEAR = 20, XP_PENALTY = 50;
+const streakBonus = s => Math.min(s*5, 50);
+
+/* ---------- Storage: account when available, else this device ---------- */
+const KEY = "levelup.v1";
+const local = {
+  load(){ try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch(e){ return null; } },
+  save(s){ try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch(e){} }
+};
+let S = local.load();
+let remote = null, writing = false, again = false;
+async function push(){
+  if(!remote) return;
+  if(writing){ again = true; return; }
+  writing = true;
+  try { await remote.set({json: JSON.stringify(S), updated: Date.now()}); }
+  catch(e){ if(e && e.code !== "unavailable"){ remote = null; note(); } }
+  writing = false;
+  if(again){ again = false; push(); }
+}
+async function connect(){
+  const c = window.claude; if(!c || !c.use) return;
+  try {
+    const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+    if(!db || !user) return;
+    const uid = await user.id(); if(!uid) return;
+    const ref = db.doc("data/users/" + uid + "/levelup");
+    const snap = await ref.get();
+    remote = ref;
+    if(snap.exists){ S = JSON.parse(snap.data().json || "null"); local.save(S); }
+    else if(S) push();
+    note(); boot();
+  } catch(e){ remote = null; }
+}
+function note(){
+  const t = remote ? "Progress is saved to your Claude account."
+                   : "Progress is saved on this device. Removing the app or clearing website data erases it.";
+  ["note0","note1"].forEach(id => document.getElementById(id).textContent = t);
+}
+function save(){ local.save(S); push(); }
+
+/* ---------- Dates ---------- */
+const pad = n => String(n).padStart(2,"0");
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const utc = iso => { const [y,m,d] = iso.split("-").map(Number); return Date.UTC(y,m-1,d); };
+const nextDay = iso => { const t = new Date(utc(iso)+864e5); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth()+1)}-${pad(t.getUTCDate())}`; };
+const pretty = iso => new Date(utc(iso)).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",timeZone:"UTC"});
+
+/* ---------- State ---------- */
+const $ = id => document.getElementById(id);
+let queue = []; // modals to show
+
+function dayLog(iso){
+  if(!S.days[iso]) S.days[iso] = { lv:S.level, tg:targets(S.level), n:{push:0,sit:0,squat:0,km:0}, got:{}, cleared:false };
+  return S.days[iso];
+}
+function isDone(d,k){ return d.n[k] >= d.tg[k]; }
+
+function gainXP(x){
+  S.xp += x;
+  while(S.level < MAX && S.xp >= need(S.level)){
+    S.xp -= need(S.level);
+    const before = S.level, rb = rankOf(before);
+    S.level++;
+    queue.push({type:"lvup", from:before, to:S.level, rankUp: rankOf(S.level) !== rb});
+  }
+  if(S.level >= MAX) S.xp = Math.min(S.xp, need(MAX));
+}
+
+/* Check days that passed since the app was last opened. */
+function settle(){
+  const t = today(); let missed = [];
+  while(S.last < t){
+    const d = S.days[S.last];
+    if(!d || !d.cleared) missed.push(S.last);
+    S.last = nextDay(S.last);
+  }
+  if(missed.length){
+    const lost = Math.min(S.xp, XP_PENALTY * missed.length);
+    S.xp -= lost; S.streak = 0;
+    queue.push({type:"pen", days:missed, lost});
+  }
+  // prune old day logs (keep 14)
+  const keys = Object.keys(S.days).sort();
+  keys.slice(0, Math.max(0, keys.length-14)).forEach(k => delete S.days[k]);
+}
+
+function change(k, delta){
+  const d = dayLog(today());
+  const before = d.n[k];
+  const step = k === "km" ? 0.1 : 1;
+  d.n[k] = Math.max(0, Math.min(d.tg[k], Math.round((before + delta)/step)*step));
+  if(k==="km") d.n[k] = Math.round(d.n[k]*10)/10;
+  const diff = d.n[k] - before;
+  S.tot[k] = Math.max(0, Math.round((S.tot[k] + diff)*10)/10);
+  if(isDone(d,k) && !d.got[k]){ d.got[k] = true; gainXP(XP_TASK); }
+  if(!d.cleared && ["push","sit","squat","km"].every(x => isDone(d,x))){
+    d.cleared = true; S.streak++; S.best = Math.max(S.best, S.streak); S.clears++;
+    d.bonus = XP_CLEAR + streakBonus(S.streak);
+    gainXP(d.bonus);
+  }
+  save(); render(); showNext();
+}
+
+/* ---------- Render ---------- */
+function render(){
+  if(!S){ return renderIntro(); }
+  $("intro").classList.add("hidden"); $("app").classList.remove("hidden");
+  const L = S.level, r = rankOf(L), d = dayLog(today()), nm = names(d.lv);
+  $("lv").textContent = L; $("rank").textContent = r;
+  $("who").textContent = S.name; $("title").textContent = TITLES[r];
+  const maxed = L >= MAX;
+  $("xpbar").style.width = maxed ? "100%" : `${S.xp/need(L)*100}%`;
+  $("xptxt").textContent = maxed ? "Max level" : `${S.xp} / ${need(L)} XP`;
+  $("streak").textContent = S.streak ? `${S.streak}-day streak` : "No streak yet";
+  $("qdate").textContent = pretty(today());
+
+  const rows = ["push","sit","squat","km"].map(k => {
+    const done = isDone(d,k), val = k==="km" ? d.n[k].toFixed(1) : d.n[k];
+    const tg = k==="km" ? `${d.tg[k].toFixed(1)} km` : d.tg[k];
+    const big = k==="km" ? 0.5 : d.tg[k] <= 15 ? 1 : d.tg[k] <= 40 ? 5 : 10;
+    return `<div class="q ${done?"done":""}">
+      <button class="box" data-all="${k}" aria-pressed="${done}" aria-label="Mark ${nm[k][0]} complete">
+        <svg viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg></button>
+      <button class="txt" data-how="${k}" aria-label="How to do ${nm[k][0]}"><div class="nm">${nm[k][0]} <span class="howtag">How to</span></div><div class="hint">${nm[k][1]}</div></button>
+      <div class="ctr">
+        <button data-k="${k}" data-d="${k==="km"?-0.5:-1}" aria-label="Less">−</button>
+        <output>${val}/${tg}</output>
+        <button data-k="${k}" data-d="${big}" aria-label="Add ${big}">+${big}</button>
+      </div></div>`;
+  }).join("");
+  $("quests").innerHTML = rows;
+  $("quests").querySelectorAll("[data-k]").forEach(b => b.onclick = () => change(b.dataset.k, +b.dataset.d));
+  $("quests").querySelectorAll("[data-how]").forEach(b => b.onclick = () => showHow(nm[b.dataset.how][0], d, b.dataset.how));
+  $("quests").querySelectorAll("[data-all]").forEach(b => b.onclick = () => {
+    const k = b.dataset.all; change(k, isDone(d,k) ? -d.n[k] : d.tg[k] - d.n[k]);
+  });
+
+  const rw = $("reward");
+  if(d.cleared){ rw.className = "reward clear"; rw.textContent = `Quest cleared. +${4*XP_TASK + d.bonus} XP today. See you tomorrow.`; }
+  else { rw.className = "reward"; rw.innerHTML = `Reward: ${XP_TASK} XP per exercise, +${XP_CLEAR + streakBonus(S.streak+1)} XP for clearing all four.<div class="warn">Not cleared by midnight: streak resets and you lose ${XP_PENALTY} XP.</div>`; }
+
+  $("tPush").textContent = S.tot.push; $("tSit").textContent = S.tot.sit; $("tSquat").textContent = S.tot.squat;
+  $("tKm").textContent = (+S.tot.km).toFixed(1); $("tClear").textContent = S.clears; $("tBest").textContent = S.best;
+
+  if(maxed){ $("nextTxt").innerHTML = `You've reached the final quest: <b>100 push-ups, 100 sit-ups, 100 squats and a 10 km run</b>, every day.`; }
+  else {
+    const n = targets(L+1), nn = names(L+1);
+    $("nextTxt").innerHTML = `At level ${L+1}: <b>${n.push} ${nn.push[0].toLowerCase()}, ${n.sit} ${nn.sit[0].toLowerCase()}, ${n.squat} ${nn.squat[0].toLowerCase()}, ${n.km.toFixed(1)} km ${nn.km[0].toLowerCase()}</b>. New targets start the day after you level up.`;
+  }
+}
+
+let startPick = null;
+function renderIntro(){
+  $("app").classList.add("hidden"); $("intro").classList.remove("hidden");
+  $("starts").innerHTML = STARTS.map((s,i) => {
+    const t = targets(s.lv), n = names(s.lv);
+    return `<button class="opt" data-i="${i}" aria-pressed="false"><b>${s.b} · Level ${s.lv}</b><span>${s.s}. First quest: ${t.push} ${n.push[0].toLowerCase()}, ${t.sit} ${n.sit[0].toLowerCase()}, ${t.squat} ${n.squat[0].toLowerCase()}, ${t.km} km ${n.km[0].toLowerCase()}.</span></button>`;
+  }).join("");
+  $("starts").querySelectorAll(".opt").forEach(b => b.onclick = () => {
+    startPick = STARTS[+b.dataset.i];
+    $("starts").querySelectorAll(".opt").forEach(x => x.setAttribute("aria-pressed", x===b));
+    $("accept").disabled = false;
+  });
+}
+$("accept").onclick = () => {
+  if(!startPick) return;
+  S = { name: $("nm").value.trim() || "Player", level: startPick.lv, xp:0, streak:0, best:0, clears:0,
+        last: today(), days:{}, tot:{push:0,sit:0,squat:0,km:0} };
+  save(); render();
+  openModal("", `<p class="win-title" style="justify-content:center">Quest accepted</p><h2>Level ${S.level}</h2>
+    <p>A new quest appears every day. Clear all four exercises before midnight to earn XP and level up. Each level makes the quest a little harder.</p>
+    <button class="cta" id="mclose">Begin</button>`);
+};
+
+/* ---------- Modals ---------- */
+function showHow(name, d, k){
+  const goal = k==="km" ? `${d.tg[k].toFixed(1)} km today` : `${d.tg[k]} reps today`;
+  openModal("how", `<p class="win-title" style="justify-content:center">How to</p><h2 style="font-size:34px">${name}</h2>
+    <p>${goal}. Split them up however you like.</p>
+    <ol class="steps">${HOW[name].map(x=>`<li>${x}</li>`).join("")}</ol>
+    <p style="font-size:13px">${TIPS}</p>
+    <button class="cta" id="mclose">Got it</button>`);
+}
+function openModal(kind, html){
+  $("modal").className = "modal " + kind;
+  $("modalBody").innerHTML = html;
+  $("mclose").onclick = () => { $("modal").classList.add("hidden"); showNext(); };
+  $("mclose").focus();
+}
+function showNext(){
+  if(!$("modal").classList.contains("hidden")) return;
+  const m = queue.shift(); if(!m) return;
+  if(m.type === "lvup"){
+    const t = targets(m.to), n = names(m.to);
+    openModal("lvup", `<p class="win-title" style="justify-content:center">Level up</p><h2>LV ${m.from} → ${m.to}</h2>
+      ${m.rankUp ? `<p>Rank up: you're now <b style="color:var(--gold)">${rankOf(m.to)}-rank</b>.</p>` : ""}
+      <p>Your quest from tomorrow:</p>
+      <ul><li>${t.push} ${n.push[0].toLowerCase()}</li><li>${t.sit} ${n.sit[0].toLowerCase()}</li><li>${t.squat} ${n.squat[0].toLowerCase()}</li><li>${t.km.toFixed(1)} km ${n.km[0].toLowerCase()}</li></ul>
+      <button class="cta" id="mclose">Continue</button>`);
+  } else {
+    openModal("pen", `<p class="win-title" style="justify-content:center">Penalty</p><h2>Quest failed</h2>
+      <p>${m.days.length === 1 ? `The quest on ${pretty(m.days[0])} wasn't cleared.` : `${m.days.length} quests weren't cleared.`}</p>
+      <p>Streak reset${m.lost ? `, −${m.lost} XP` : ""}. You keep your level.</p>
+      <button class="cta" id="mclose">Get back to it</button>`);
+  }
+}
+$("rulesBtn").onclick = () => openModal("", `<p class="win-title" style="justify-content:center">How it works</p><h2 style="font-size:32px">Daily quest</h2>
+  <ul>
+   <li>Four exercises every day, sized to your level.</li>
+   <li>Split the reps across the day however you like.</li>
+   <li>+${XP_TASK} XP per exercise, plus a clear bonus that grows with your streak.</li>
+   <li>Miss a day: streak resets, −${XP_PENALTY} XP. You never lose a level.</li>
+   <li>Easier versions (wall push-ups, chair squats, walking) until you've leveled past them.</li>
+   <li>Level ${MAX} is the final quest: 100 / 100 / 100 and 10 km.</li>
+  </ul>
+  <p style="font-size:13px">Feeling pain, dizziness or shortness of breath? Stop and rest. Check with a doctor before starting if you have a health condition.</p>
+  <button class="cta" id="mclose">Got it</button>`);
+$("resetBtn").onclick = () => {
+  if(!confirm("Start over at the beginning? All levels, XP and stats will be erased.")) return;
+  S = null; save(); queue = []; startPick = null; $("accept").disabled = true; render();
+};
+
+function boot(){ if(S){ settle(); save(); } render(); showNext(); }
+document.addEventListener("visibilitychange", () => { if(!document.hidden) boot(); });
+note(); boot(); connect();
+</script>
+</body>
+</html>
