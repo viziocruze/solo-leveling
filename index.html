@@ -90,6 +90,19 @@ label.lbl{display:block;font-weight:600;margin:0 0 6px}
 button.txt{background:none;border:0;padding:0;text-align:left;cursor:pointer}
 .howtag{font-family:var(--hud);font-weight:700;font-size:11px;color:var(--glow);border:1px solid var(--edge);padding:1px 6px;margin-left:4px;vertical-align:2px;text-decoration:none;display:inline-block}
 .q.done .nm .howtag{text-decoration:none}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+.figs figure{margin:0;background:color-mix(in srgb,var(--edge) 14%,transparent);border:1px solid color-mix(in srgb,var(--edge) 60%,transparent);padding:8px 6px 6px}
+.figs svg{display:block;width:100%;height:auto}
+.figs figcaption{font-size:12px;color:var(--muted);line-height:1.3;margin-top:4px;text-align:left}
+.figs figcaption b{display:block;color:var(--glow);font-family:var(--hud);font-size:12px}
+.figs .fl{stroke:var(--edge);stroke-width:2}
+.figs .pr{stroke:var(--muted);stroke-width:3;fill:none;stroke-linecap:round}
+.figs .bd polyline{fill:none;stroke:var(--glow);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.figs .bd circle{fill:var(--glow)}
+.modal .win{max-height:calc(100vh - 48px);overflow:auto}
+.syncrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.sync{flex:1;padding:10px 12px;border:1px solid var(--edge);background:none;font-family:var(--hud);font-weight:700;font-size:14px;color:var(--glow);text-align:left}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--panel2);border:1px solid var(--glow);padding:10px 16px;font-size:14px;max-width:90%;box-shadow:0 0 18px -6px var(--glow)}
 .steps{text-align:left;margin:12px 0;padding-left:22px}
 .steps li{margin:8px 0}
 .reward{margin-top:12px;padding-top:12px;border-top:1px dashed var(--edge);font-size:14px;color:var(--muted)}
@@ -153,6 +166,7 @@ button.txt{background:none;border:0;padding:0;text-align:left;cursor:pointer}
     <p class="win-title">Daily quest <small id="qdate"></small></p>
     <div id="quests"></div>
     <div id="reward" class="reward"></div>
+    <div class="syncrow"><button class="sync" id="syncBtn">Sync distance from Health</button><button class="link" id="syncHelp">Set up</button></div>
   </div>
 
   <div class="win">
@@ -180,6 +194,7 @@ button.txt{background:none;border:0;padding:0;text-align:left;cursor:pointer}
 </section>
 </div>
 
+<div id="toast" class="toast hidden" role="status"></div>
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="win" id="modalBody"></div></div>
 
 <script>
@@ -223,6 +238,54 @@ const HOW = {
   "Walk or jog":["Warm up with 5 minutes of brisk walking.","Jog for 1 minute, then walk for 2 minutes. Repeat until you hit the distance.","Jog a little longer each week as it gets easier.","Land softly under your body with short steps, not big strides."],
   "Run":["Warm up with 5 minutes of walking or slow jogging.","Run at an easy pace where you could still say short sentences.","Take walk breaks whenever you need them. The distance is what counts.","Cool down with a few minutes of walking and some light stretching."]
 };
+/* Poses: h = head centre, L = limb polylines. Props: wall, chair, floor always drawn. Floor at y=90. */
+const P = (h, ...L) => ({h, L});
+const FIGS = {
+  "Wall push-ups": { props:["wall"], cap:["Arms straight","Lean in, then push back"], f:[
+    P([83,24], [[76,32],[61,61],[46,90]], [[76,34],[88,35],[101,36]]),
+    P([93,34], [[86,42],[64,65],[46,90]], [[86,44],[94,54],[101,42]]) ]},
+  "Knee push-ups": { props:[], cap:["Arms straight","Chest down, then push up"], f:[
+    P([95,48], [[86,54],[56,75],[40,89],[24,80]], [[86,56],[87,73],[88,89]]),
+    P([99,72], [[89,77],[58,84],[40,89],[24,80]], [[89,79],[76,82],[88,89]]) ]},
+  "Push-ups": { props:[], cap:["High plank","Chest near the floor, then push up"], f:[
+    P([98,48], [[89,54],[52,70],[14,88]], [[89,56],[89,73],[89,89]]),
+    P([101,72], [[91,76],[52,80],[14,88]], [[91,78],[77,80],[89,89]]) ]},
+  "Crunches": { props:[], cap:["Lie back, knees bent","Lift shoulder blades, lower slowly"], f:[
+    P([96,82], [[87,84],[52,86],[38,64],[30,89]], [[82,84],[76,78],[83,78]]),
+    P([85,62], [[78,70],[52,86],[38,64],[30,89]], [[74,73],[70,66],[77,66]]) ]},
+  "Sit-ups": { props:[], cap:["Lie back, knees bent","Curl all the way up"], f:[
+    P([96,82], [[87,84],[52,86],[38,64],[30,89]], [[82,84],[76,78],[83,78]]),
+    P([50,40], [[50,48],[54,86],[36,62],[28,89]], [[50,52],[43,58],[50,61]]) ]},
+  "Chair squats": { props:["chair"], cap:["Stand tall","Sit back to the seat, stand up"], f:[
+    P([62,12], [[62,20],[62,52],[63,71],[62,89]], [[62,24],[63,37],[64,48]]),
+    P([60,26], [[56,34],[42,60],[64,60],[62,89]], [[57,37],[70,40],[82,40]]) ]},
+  "Squats": { props:[], cap:["Stand tall","Hips back, thighs parallel"], f:[
+    P([62,12], [[62,20],[62,52],[63,71],[62,89]], [[62,24],[63,37],[64,48]]),
+    P([62,28], [[58,36],[40,62],[64,62],[62,89]], [[59,39],[72,42],[84,42]]) ]},
+  "Walk": { props:[], cap:["Head up, relaxed arms","Easy, steady steps"], f:[
+    P([60,12], [[60,20],[60,52]], [[60,52],[66,70],[74,89]], [[60,52],[55,71],[46,89]], [[60,24],[55,36],[52,47]], [[60,24],[66,36],[71,45]]),
+    P([60,12], [[60,20],[60,52]], [[60,52],[61,71],[61,89]], [[60,52],[55,68],[49,80]], [[60,24],[62,36],[65,46]], [[60,24],[57,36],[55,47]]) ]},
+  "Walk or jog": { props:[], cap:["Jog 1 minute","Walk 2 minutes, repeat"], f:[
+    P([64,14], [[62,22],[58,52]], [[58,52],[68,66],[70,85]], [[58,52],[50,70],[40,80]], [[62,26],[68,36],[75,32]], [[62,26],[54,36],[50,44]]),
+    P([60,12], [[60,20],[60,52]], [[60,52],[66,70],[74,89]], [[60,52],[55,71],[46,89]], [[60,24],[55,36],[52,47]], [[60,24],[66,36],[71,45]]) ]},
+  "Run": { props:[], cap:["Short steps, land under you","Easy pace, arms at 90°"], f:[
+    P([68,14], [[65,22],[57,51]], [[57,51],[72,58],[69,76]], [[57,51],[48,68],[34,74]], [[65,26],[72,36],[80,30]], [[65,26],[55,34],[49,42]]),
+    P([68,15], [[65,23],[57,52]], [[57,52],[62,70],[65,89]], [[57,52],[46,64],[36,72]], [[65,27],[58,38],[52,32]], [[65,27],[72,35],[76,43]]) ]}
+};
+function drawProps(p){
+  let s = `<line x1="4" y1="90" x2="116" y2="90" class="fl"/>`;
+  if(p.includes("wall")) s += `<line x1="103" y1="6" x2="103" y2="90" class="pr"/>`;
+  if(p.includes("chair")) s += `<path d="M18 30 V89 M18 60 H44 M44 60 V89" class="pr"/>`;
+  return s;
+}
+function figSVG(name, i){
+  const F = FIGS[name]; if(!F) return "";
+  const pose = F.f[i];
+  const lines = pose.L.map(l => `<polyline points="${l.map(p=>p.join(",")).join(" ")}"/>`).join("");
+  return `<svg viewBox="0 0 120 96" role="img" aria-label="${F.cap[i]}">${drawProps(F.props)}<g class="bd">${lines}<circle cx="${pose.h[0]}" cy="${pose.h[1]}" r="6.5"/></g></svg>`;
+}
+
+
 const TIPS = "Warm up for 3–5 minutes first. Slow, controlled reps beat fast ones. Stop if you feel sharp pain, dizziness or chest pain.";
 const need = L => 100 + 20*(L-1);
 const XP_TASK = 20, XP_CLEAR = 20, XP_PENALTY = 50;
@@ -405,6 +468,7 @@ function showHow(name, d, k){
   const goal = k==="km" ? `${d.tg[k].toFixed(1)} km today` : `${d.tg[k]} reps today`;
   openModal("how", `<p class="win-title" style="justify-content:center">How to</p><h2 style="font-size:34px">${name}</h2>
     <p>${goal}. Split them up however you like.</p>
+    ${FIGS[name] ? `<div class="figs">${[0,1].map(i=>`<figure>${figSVG(name,i)}<figcaption><b>${i?"Finish":"Start"}</b> ${FIGS[name].cap[i]}</figcaption></figure>`).join("")}</div>` : ""}
     <ol class="steps">${HOW[name].map(x=>`<li>${x}</li>`).join("")}</ol>
     <p style="font-size:13px">${TIPS}</p>
     <button class="cta" id="mclose">Got it</button>`);
@@ -448,9 +512,66 @@ $("resetBtn").onclick = () => {
   S = null; save(); queue = []; startPick = null; $("accept").disabled = true; render();
 };
 
+/* ---------- Health sync (via an iOS Shortcut) ---------- */
+function toast(t){ const el=$("toast"); el.textContent=t; el.classList.remove("hidden"); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.add("hidden"),3500); }
+function parseKm(txt){
+  if(txt==null) return null;
+  const str = String(txt).replace(",", ".");
+  const m = str.match(/(\d+(?:\.\d+)?)\s*(km|kilometers?|mi|miles?)?/i);
+  if(!m) return null;
+  let v = parseFloat(m[1]);
+  if(m[2] && /^mi/i.test(m[2])) v *= 1.609;
+  return (v >= 0 && v < 200) ? v : null;
+}
+function importKm(km){
+  if(!S) return;
+  const d = dayLog(today());
+  const v = Math.min(d.tg.km, Math.round(km*10)/10);
+  if(v > d.n.km){ change("km", v - d.n.km); toast(`Synced ${km.toFixed(1)} km from Health.`); }
+  else toast(`Health shows ${km.toFixed(1)} km. Nothing new to add.`);
+}
+function syncFromUrl(){
+  const q = new URLSearchParams(location.search);
+  if(!q.has("km")) return;
+  const v = parseKm(q.get("km"));
+  history.replaceState(null, "", location.pathname);
+  if(v != null) importKm(v);
+}
+async function syncFromClipboard(){
+  try {
+    const v = parseKm(await navigator.clipboard.readText());
+    if(v == null) return showSetup("Your clipboard doesn't have a distance on it. Run the shortcut first, then tap Sync.");
+    importKm(v);
+  } catch(e){ showSetup("Paste was blocked. Tap Sync again and choose Paste when your phone asks."); }
+}
+function showSetup(msg){
+  const url = location.origin + location.pathname;
+  openModal("how", `<p class="win-title" style="justify-content:center">Health sync</p><h2 style="font-size:30px">Connect Apple Health</h2>
+    ${msg ? `<p style="color:var(--red)">${msg}</p>` : ""}
+    <p>This pulls today's walking and running distance from Apple Health, which includes Apple Watch, Oura, Strava and most fitness apps. Reps are still counted by you.</p>
+    <p style="text-align:left;margin-top:12px"><b>One-time setup in the Shortcuts app</b></p>
+    <ol class="steps">
+      <li>Open <b>Shortcuts</b>, tap <b>+</b>, name it <b>Level Up Sync</b>.</li>
+      <li>Add <b>Find Health Samples</b>. Set Type to <b>Walking + Running Distance</b> and add the filter <b>Start Date is today</b>.</li>
+      <li>Add <b>Calculate Statistics</b> and choose <b>Sum</b>.</li>
+      <li>Add <b>Copy to Clipboard</b>.</li>
+      <li>Run it once and tap <b>Allow</b> for Health access.</li>
+    </ol>
+    <p style="text-align:left"><b>Each day</b></p>
+    <ol class="steps">
+      <li>Run <b>Level Up Sync</b> from Shortcuts or a widget.</li>
+      <li>Open this app, tap <b>Sync distance from Health</b>, then <b>Paste</b>.</li>
+    </ol>
+    <p style="font-size:13px">Using Oura? In the Oura app turn on Settings → Apple Health so its activity reaches Health.</p>
+    <p style="font-size:13px">Using this in Safari instead of a home screen icon? Replace step 4 with <b>Open URLs</b> set to <span style="word-break:break-all">${url}?km=</span> followed by the Statistics result, and it syncs on its own.</p>
+    <button class="cta" id="mclose">Done</button>`);
+}
+$("syncBtn").onclick = syncFromClipboard;
+$("syncHelp").onclick = () => showSetup("");
+
 function boot(){ if(S){ settle(); save(); } render(); showNext(); }
 document.addEventListener("visibilitychange", () => { if(!document.hidden) boot(); });
-note(); boot(); connect();
+note(); boot(); syncFromUrl(); connect();
 </script>
 </body>
 </html>
